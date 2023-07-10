@@ -257,17 +257,16 @@ class IntroductionScreen extends StatefulWidget {
   /// @Default `[false,false,false,false]`
   final List<bool> safeAreaList;
 
-  /// A handler to check if the user is allowed to progress to the next page.
-  /// If returned value is true, the page will progress to the next page, otherwise the page will not progress.
+  /// A handler to check if the user is allowed to progress to a page, normally the next page, unless animateScroll was called programmatically.
+  /// If returned value is true, the page will progress to the target page, otherwise the page will not progress.
   /// In order to make it work properly with TextFormField, you should place setState in the onChanged callback of the TextFormField.
   ///
   /// @Default `true`
   /// ```dart
-  /// canProgress: (page) {
-  ///     int _currentPage = page.round();
-  ///     if (_currentPage == 0 && _textFieldController1.text.isEmpty) {
+  /// canProgress: (currentPage, [int? targetPage]) {
+  ///     if (currentPage == 0 && _textFieldController1.text.isEmpty) {
   ///       return false;
-  ///     } else if (_currentPage == 1 && _textFieldController2.text.isEmpty) {
+  ///     } else if (currentPage == 1 && _textFieldController2.text.isEmpty) {
   ///       return false;
   ///     } else {
   ///       return true;
@@ -510,11 +509,12 @@ class IntroductionScreenState extends State<IntroductionScreen> {
   }
 
   Future<void> animateScroll(int page) async {
-    bool isValidToProgress = widget.canProgress(_currentPage);
+    final targetPage = max(min(page, getPagesLength() - 1), 0);
+    bool isValidToProgress = widget.canProgress(_currentPage, targetPage);
     if (isValidToProgress) {
       _isScrolling = true;
       await _pageController.animateToPage(
-        max(min(page, getPagesLength() - 1), 0),
+        targetPage,
         duration: Duration(milliseconds: widget.animationDuration),
         curve: widget.curve,
       );
@@ -613,7 +613,10 @@ class IntroductionScreenState extends State<IntroductionScreen> {
                   allowImplicitScrolling: widget.allowImplicitScrolling,
                   physics: widget.freeze
                       ? const NeverScrollableScrollPhysics()
-                      : !widget.canProgress(_currentPage)
+                      : !widget.canProgress(
+                              _currentPage,
+                              max(min(_currentPage + 1, getPagesLength() - 1),
+                                  0))
                           ? const NeverScrollableScrollPhysics()
                           : widget.scrollPhysics,
                   children: widget.pages
